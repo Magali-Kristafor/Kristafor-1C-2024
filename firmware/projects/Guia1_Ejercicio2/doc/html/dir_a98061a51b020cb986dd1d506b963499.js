@@ -1,0 +1,4 @@
+var dir_a98061a51b020cb986dd1d506b963499 =
+[
+    [ "CMakeCXXCompilerId.cpp", "_kristafor-1_c-2024_2firmware_2projects_2_guia1___ejercicio2_2build_2_c_make_files_23_824_80_2_cfd5497b9e72706f9db9faa16875fce79.html", "_kristafor-1_c-2024_2firmware_2projects_2_guia1___ejercicio2_2build_2_c_make_files_23_824_80_2_cfd5497b9e72706f9db9faa16875fce79" ]
+];

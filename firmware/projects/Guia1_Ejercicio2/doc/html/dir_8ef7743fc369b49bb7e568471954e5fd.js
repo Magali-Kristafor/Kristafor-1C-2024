@@ -1,0 +1,4 @@
+var dir_8ef7743fc369b49bb7e568471954e5fd =
+[
+    [ "CMakeCCompilerId.c", "_kristafor-1_c-2024_2firmware_2projects_2_guia1___ejercicio2_2build_2bootloader_2_c_make_files_235c7082f61f401f17009075921edcee8.html", "_kristafor-1_c-2024_2firmware_2projects_2_guia1___ejercicio2_2build_2bootloader_2_c_make_files_235c7082f61f401f17009075921edcee8" ]
+];
