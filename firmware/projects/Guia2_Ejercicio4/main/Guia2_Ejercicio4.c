@@ -1,9 +1,10 @@
-/*! @mainpage Blinking
+/*! @mainpage Guia2_Ejercicio4 (osciloscopio)
  *
  * \section genDesc General Description
  *
  * Esta aplicacion funciona con un osciloscopio.
- * Se convierte una señal analogica en digital.
+ * Convierte una señal analogica en digital. 
+ * Reconstruye una señal analogica apartir de un arreglo de datos (digital). 
  *
  * @section changelog Changelog
  *
@@ -11,7 +12,7 @@
  * |:----------:|:-----------------------------------------------|
  * | 24/04/2024 | Document creation		                         |
  *
- * @author Magali Kristafor (magali.kristafor@)
+ * @author Magali Kristafor (magali.kristafor@ingenieria.uner.edu.ar)
  *
  */
 
@@ -271,20 +272,20 @@ const char ecg[BUFFER_SIZE] = {
 
 /*==================[internal functions declaration]=========================*/
 /**
- * @brief Función invocada en la interrupción del timer A
+ * @brief Función invocada en la interrupción del timer A. 
  */
 void FuncTimerA(void *param)
 {
     xTaskNotifyGive(AD_task); /* Envía una notificación a la tarea asociada al LED_1 */
 }
 
-void FuncTimerB(void *param)
+void FuncTimerB(void *param) 
 {
     xTaskNotifyGive(DA_ECG_task); /* Envía una notificación a la tarea asociada al LED_1 */
 }
 
 /**
- * @brief Tarea encargada de 
+ * @brief Tarea encargada de Leer los datos analogicos 
  */
 static void LeerDatos_AD(void *pvParameter)
 {
@@ -298,6 +299,9 @@ static void LeerDatos_AD(void *pvParameter)
     }
 }
 
+/**
+ * @brief Tarea encargada de convertir datos en una grafica de ecg. (digital-->analog)
+ */
 static void Convert_DA_ECG(void *pvParameter)
 {
     uint8_t i = 0;
@@ -335,14 +339,13 @@ void app_main(void)
         .param_p = NULL};
     TimerInit(&timer_DA_ECG);
 
-    /* Inicialización del Puerto serie */
+    /* Inicialización del Puerto serie (UART)*/
     serial_config_t Puerto_Serie = {
         .port = UART_PC,
         .baud_rate = 115200,
         .func_p = NULL,
         .param_p = NULL};
     UartInit(&Puerto_Serie);
-
 
     /* Inicialización AD inputs */
     analog_input_config_t AD = {
@@ -351,12 +354,11 @@ void app_main(void)
         .func_p = NULL,
         .sample_frec = NULL,
         .param_p = NULL};
-     AnalogInputInit(&AD);
+    AnalogInputInit(&AD);
 
     /* Creación de tareas */
     xTaskCreate(&LeerDatos_AD, "Convert_AD", 512, NULL, 5, &AD_task);
     xTaskCreate(&Convert_DA_ECG, "Convert_DA", 512, NULL, 5, &DA_ECG_task);
-
 
     /* Inicialización del conteo de timers */
     TimerStart(timer_AD.timer);
