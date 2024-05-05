@@ -2,15 +2,40 @@
  *
  * \section genDesc General Description
  *
- * This example makes LED_1, LED_2 and LED_3 blink at different rates, using FreeRTOS tasks.
+ *  Esta aplicacion mide la distancia en cm utilizando un ultrasonido (HC-SR04). 
+ * Ademas muestra por un display LCD lo medido e indica con leds de diferentes colores los valores dentro de los rangos establecidos. 
+ *  
+ * Rangos 
+ *      Distancia (cm)        LEDs
+ *      [0-10]               Ninguno
+ *      [10-20]              LED_1
+ *      [20-30]              LED_2
+ *       >30                 LED_3
+ * 
+ * Se enciende y apaga la aplicacion al presionar tecla 'o' del teclado de la compu.
+ * Al presionar tecla 'h' del teclado de la compu, holdea el valor medido. 
  *
+ *  // Se implenta la aplicacion utilizando interrupciones, timers e interfaz por puerto serie (UART) //
+ * 
+ * * @section hardConn Hardware Connection
+ *
+ * |    Peripheral  |           	|
+ * |    ultrasonido |     ESP32     |
+ * |    (HC-SR04)   |               |
+ * |:--------------:|:--------------|
+ * | 	ECHO	 	| 	GPIO_3		|
+ * | 	ECHO	 	| 	GPIO_2		|
+ * | 	TRIGGER	 	| 	GPIO_3		|
+ * |    +5V         |   +5V         |
+ * |    GND         |   GND         |
+
  * @section changelog Changelog
  *
  * |   Date	    | Description                                    |
  * |:----------:|:-----------------------------------------------|
- * | 12/09/2023 | Document creation		                         |
+ * | 17/04/2024 | Document creation		                         |
  *
- * @author Magali Kristafor (magali.kristafor@)
+ * @author Magali Kristafor (magali.kristafor@ingenieria.uner.edu.ar)
  *
  */
 
@@ -43,7 +68,8 @@ TaskHandle_t task_mostrar = NULL;
 /*==================[internal functions declaration]=========================*/
 
 
-
+/** @brief Tarea encargada de mostar por display LCD el valor medido y encender el led correspondiente a la medicion 
+*/
 static void Mostrar(void *pvParameter)
 {
 
@@ -95,6 +121,9 @@ static void Mostrar(void *pvParameter)
     }
 }
 
+
+/** @brief Tarea encargada de medir la distancia.
+*/
 static void Medir(void *pvParameter)
 {
     while (true)
@@ -105,23 +134,43 @@ static void Medir(void *pvParameter)
     }
 }
 
+
+/** @brief Función invocada en la interrupción del timer
+ */
 static void FuncTimer(void *pvParameter)
 {
     xTaskNotifyGive(task_medir);
     xTaskNotifyGive(task_mostrar);
 }
 
+
+/** @fn void interrupcion_Tecla1(void)
+  @brief Interrupcion asociada a la tecla 1. Cambia su estado(on/off) en el caso de ser presionada. 
+  @param[in] null
+  @retval null
+ */
 void interrupcion_Tecla1(void)
 {
     on_off = !on_off;
 }
 
+
+/** @fn void interrupcion_Tecla2(void)
+  @brief Interrupcion asociada a la tecla 2. Cambia su estado(hold/!hold) en el caso de ser presionada. 
+  @param[in] null
+  @retval null
+ */
 void interrupcion_Tecla2(void)
 {
     hold = !hold;
 }
 
 
+/** @fn void Control_Teclas(void)
+  @brief Interrupcion para el control de teclas, h; o,  asociadas a la interfase en serie.
+  @param[in] null
+  @retval null
+ */
 void Control_Teclas(void)
 {
     uint8_t dato;
@@ -145,11 +194,10 @@ void app_main(void)
     LedsInit();
     LcdItsE0803Init();
     SwitchesInit();
-
     HcSr04Init(GPIO_3, GPIO_2);
 
+    /*Interrupcion de teclas*/
     SwitchActivInt(SWITCH_1, &interrupcion_Tecla1);
-
     SwitchActivInt(SWITCH_2, &interrupcion_Tecla2);
 
     /* Inicialización de timers */
@@ -172,7 +220,10 @@ void app_main(void)
         .param_p = NULL};
     UartInit(&uart_pc);
 
+    /*Creacion de tareas*/
     xTaskCreate(&Medir, "Medir", 2048, NULL, 5, task_medir);
     xTaskCreate(&Mostrar, "Muestra_LCD", 512, NULL, 5, task_mostrar);
+
+    /*Inicio del timer*/
     TimerStart(timer_Measure.timer);
 }
