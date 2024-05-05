@@ -1,9 +1,9 @@
-/*! @mainpage Guia2
+/*! @mainpage Guia2_Ejercicio1. Medicion de distancia. 
  *
  * \section genDesc General Description
  * 
  * Esta aplicacion mide la distancia en cm utilizando un ultrasonido (HC-SR04). 
- * Ademas muestra por un display LCD lo medido e indica con leds, de diferentes colores, los valores dentros de los rangos establecidos. 
+ * Ademas muestra por un display LCD lo medido e indica con leds, de diferentes colores, los valores dentro de los rangos establecidos. 
  *  
  * Rangos 
  *      Distancia (cm)        LEDs
@@ -18,7 +18,9 @@
  * ----------------------------------------------------------------------------------------------------
  * @section hardConn Hardware Connection
  *
- * |    Peripheral  |   ESP32   	|
+ * |    Peripheral  |           	|
+ * |    ultrasonido |     ESP32     |
+ * |    (HC-SR04)   |               |
  * |:--------------:|:--------------|
  * | 	ECHO	 	| 	GPIO_3		|
  * | 	ECHO	 	| 	GPIO_2		|
@@ -54,14 +56,12 @@
 
 bool hold = false;
 bool on_off = false;
+
 uint16_t distancia = 0;
 
 /*==================[internal functions declaration]=========================*/
 
-/** @fn void Mostrar(void *pvParameter)
- * @brief Muestar por display LCD el valor medido y enciende el led correspondiente a la medicion 
- * @param 
- * @retval Null. 
+/** @brief Tarea encargada de mostar por display LCD el valor medido y encender el led correspondiente a la medicion 
 */
 static void Mostrar(void *pvParameter)
 {
@@ -112,10 +112,7 @@ static void Mostrar(void *pvParameter)
 }
 
 
-/** @fn void Medir(void *pvParameter)
- * @brief Mide la distancia con una funcion del drive HC-SR04 
- * @param 
- * @retval Null. 
+/** @brief Tarea encargada de medir la distancia.
 */
 static void Medir(void *pvParameter)
 {
@@ -127,10 +124,7 @@ static void Medir(void *pvParameter)
 }
 
 
-/** @fn void Teclas(void *pvParameter)
- * @brief Lee el estado de las teclas 1 y 2 y cambia el estado de las banderas correspondietes a las mismas. 
- * @param  puntero a una funcion
- * @retval Null. 
+/** @brief Tarea encargada de leer el estado de las teclas 1 y 2 y cambiar el estado de las banderas correspondietes a las mismas. 
 */
 static void Teclas(void *pvParameter)
 {
