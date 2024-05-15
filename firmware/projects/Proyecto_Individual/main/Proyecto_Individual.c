@@ -33,11 +33,19 @@
 #define LUX_NORMAL 500
 
 /*==================[internal data definition]===============================*/
-bool flg_auto_manual = false; // True cuando es para manual
-bool flg_on_off = false;
-
 TaskHandle_t ldr_task = NULL;
 TaskHandle_t led2_task_handle = NULL;
+
+/*Variables para la comunicacion bluetooth*/
+bool flg_on_off = false; //true para activar la app
+bool flg_auto_manual = false; // true para activar el modo manual. 
+uint8_t mode=0; // Modo manual o automatico. valores ('B'=on) ('b'=off).
+
+char direction ;
+//uint8_t up; 
+//uint8_t down; 
+//uint8_t left; 
+//uint8_t right;  
 
 /* -------Variables LDR-----------*/
 /* Inputs para los LDRs, canales para la ADC. */
@@ -69,13 +77,6 @@ void FuncTimerLDR(void *param)
     xTaskNotifyGive(ldr_task); /* Envía una notificación a la tarea asociada al LED_1 */
 }
 
-/**
- * @brief Función invocada en la interrupción del timer B
- */
-void FuncTimerB(void *param)
-{
-    xTaskNotifyGive(led2_task_handle); /* Envía una notificación a la tarea asociada al LED_2 */
-}
 
 /**
  * @brief Tarea encargada de sensar la intendsidad de luz.
@@ -92,20 +93,8 @@ static void SensarIntensidadLuz(void *pvParameter)
     }
 }
 
-/**
- * @brief Tarea encargada de blinkear el LED_2
- */
-static void Led2Task(void *pvParameter)
-{
-    while (true)
-    {
-        ulTaskNotifyTake(pdTRUE, portMAX_DELAY); /* La tarea espera en este punto hasta recibir una notificación */
-        printf("LED_2 Toggle\n");
-        LedToggle(LED_2);
-    }
-}
 
-void Comunicacion(void)
+void Recepcion_BL(void) // Recepcion de bluetooth. 
 {
     uint8_t valor;
     UartReadByte(UART_CONNECTOR, &valor);
@@ -115,15 +104,36 @@ void Comunicacion(void)
         flg_on_off = !flg_on_off;
         break;
     case 'c': /*Valor para Off, app*/
-        flg_on_off = flg_on_off; 
+        flg_on_off = flg_on_off;
         break;
 
-    case 'B': /*Valor para On, app*/
-        flg_auto_manual=!flg_auto_manual; 
+    case 'B': /*Valor on para activar el modo manual*/
+        flg_auto_manual = !flg_auto_manual;
+        mode=B; 
         break;
-    case 'b': /*Valor para Off, app*/
-        flg_on_off = flg_on_off; 
+    case 'b': /*Valor off para apagar el modo manual*/
+        flg_on_off = flg_on_off;
+        mode=b; 
         break;
+    
+
+    case '1': /*Valor para mover arriba*/
+        direction = 'u';
+        //up=1;
+        break;
+    
+    case '3': /*Valor para mover abajo*/
+        direction = 'd';
+        break;
+    
+    case '2': /*Valor para mover derecha*/
+        direction = 'r';
+        break;
+
+    case '4': /*Valor para mover izquierda*/
+        direction = 'l';
+        break;
+    
     default:
         break;
     }
@@ -132,7 +142,6 @@ void Comunicacion(void)
 /*==================[external functions definition]==========================*/
 void app_main(void)
 {
-
     /* Inicialización de timers */
     timer_config_t timer_ldr = {
         .timer = TIMER_A,
@@ -140,13 +149,6 @@ void app_main(void)
         .func_p = FuncTimerLDR,
         .param_p = NULL};
     TimerInit(&timer_ldr);
-
-    timer_config_t timer_led_2 = {
-        .timer = TIMER_B,
-        .period = CONFIG_BLINK_PERIOD_LED_2_US,
-        .func_p = FuncTimerB,
-        .param_p = NULL};
-    TimerInit(&timer_led_2);
 
     /**Inicializacion de los LDRs*/
     LDR_Init(ldr_arriba_input);
@@ -168,15 +170,13 @@ void app_main(void)
     serial_config_t Puerto_Serie = {
         .port = UART_CONNECTOR,
         .baud_rate = 9600,
-        .func_p = Comunicacion,
+        .func_p = Recepcion_BL,
         .param_p = NULL};
     UartInit(&Puerto_Serie);
 
     /* Creación de tareas */
     xTaskCreate(&SensarIntensidadLuz, "Sensado de luz", 512, NULL, 5, &ldr_task);
-    xTaskCreate(&Led2Task, "LED_2", 512, NULL, 5, &led2_task_handle);
+ 
     /* Inicialización del conteo de timers */
     TimerStart(timer_ldr.timer);
-
-    TimerStart(timer_led_2.timer);
 }
