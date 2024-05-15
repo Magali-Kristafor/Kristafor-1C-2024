@@ -15,7 +15,7 @@
 
 /*==================[internal data declaration]==============================*/
 analog_input_config_t LDRinput;
-uint16_t luz_aux_dig;
+//uint16_t luz_aux_dig;
 
 
 /*==================[internal functions declaration]=========================*/
@@ -35,15 +35,14 @@ bool LDR_Init(uint8_t Channel)
 	LDRinput.func_p = NULL;
 	LDRinput.param_p = NULL;
 	AnalogInputInit(&LDRinput); 
-
 	return true; 
 }
 
 uint16_t LDRReadLuxImtensity(void)
 {
 	uint16_t ilum_lux=0;
-	AnalogInputReadSingle(LDRinput.input, &luz_aux_dig);
-	ilum_lux = (luz_aux_dig * LDR_DARK * 10) / (LDR_10LUX * R_CALIBRACION * (1024 - luz_aux_dig)); 
+	AnalogInputReadSingle(LDRinput.input, &ilum_lux);
+	//ilum_lux = (luz_aux_dig * LDR_DARK * 10) / (LDR_10LUX * R_CALIBRACION * (1024 - luz_aux_dig)); 
 	return ilum_lux; 
 	
 }
