@@ -26,10 +26,11 @@
 #include "gpio_mcu.h"
 #include "analog_io_mcu.h"
 #include "uart_mcu.h"
+#include "ble_mcu.h"
 
 /*==================[macros and definitions]=================================*/
 #define PERIOD_LDR 1000000 //(1s)
-#define CONFIG_BLINK_PERIOD_LED_2_US 1300000
+//#define CONFIG_BLINK_PERIOD_LED_2_US 1300000
 #define LUX_NORMAL 500
 
 /*==================[internal data definition]===============================*/
@@ -41,12 +42,16 @@ bool flg_on_off = false; //true para activar la app
 bool flg_auto_manual = false; // true para activar el modo manual. 
 uint8_t mode=0; // Modo manual o automatico. valores ('B'=on) ('b'=off).
 
-char direction ;
-//uint8_t up; 
-//uint8_t down; 
-//uint8_t left; 
-//uint8_t right;  
+//int direction ;
 
+typedef enum {
+    UP=1,
+    DOWN=3, 
+    RIGHT=2,
+    LEFT=4
+} botones;
+botones direction;
+ 
 /* -------Variables LDR-----------*/
 /* Inputs para los LDRs, canales para la ADC. */
 uint8_t ldr_arriba_input = CH0;  // Norte
@@ -97,6 +102,7 @@ static void SensarIntensidadLuz(void *pvParameter)
 void Recepcion_BL(void) // Recepcion de bluetooth. 
 {
     uint8_t valor;
+     
     UartReadByte(UART_CONNECTOR, &valor);
     switch (valor)
     {
@@ -109,29 +115,28 @@ void Recepcion_BL(void) // Recepcion de bluetooth.
 
     case 'B': /*Valor on para activar el modo manual*/
         flg_auto_manual = !flg_auto_manual;
-        mode=B; 
+        mode= 'B'; 
         break;
     case 'b': /*Valor off para apagar el modo manual*/
         flg_on_off = flg_on_off;
-        mode=b; 
+        mode='b'; 
         break;
     
-
     case '1': /*Valor para mover arriba*/
-        direction = 'u';
+        direction = UP;
         //up=1;
         break;
     
     case '3': /*Valor para mover abajo*/
-        direction = 'd';
+        direction = DOWN;
         break;
     
     case '2': /*Valor para mover derecha*/
-        direction = 'r';
+        direction = RIGHT;
         break;
 
     case '4': /*Valor para mover izquierda*/
-        direction = 'l';
+        direction = LEFT;
         break;
     
     default:
@@ -167,13 +172,21 @@ void app_main(void)
         .dir = GPIO_OUTPUT};
     GPIOInit(servo2.pin, servo2.dir);
 
-    serial_config_t Puerto_Serie = {
+  /*  serial_config_t Puerto_Serie = {
         .port = UART_CONNECTOR,
         .baud_rate = 9600,
         .func_p = Recepcion_BL,
         .param_p = NULL};
     UartInit(&Puerto_Serie);
+*/
 
+ ble_config_t ble_configuration = {
+        "ESP_EDU_1",
+        read_data
+    };
+
+    LedsInit();
+    BleInit(&ble_configuration);
     /* Creación de tareas */
     xTaskCreate(&SensarIntensidadLuz, "Sensado de luz", 512, NULL, 5, &ldr_task);
  
