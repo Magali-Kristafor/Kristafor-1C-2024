@@ -41,8 +41,7 @@
  * @brief Inicializa el LDR.
  * @param[in] recibe como parametro el canal para el ADC, el cual es de tipo uint8_t.
  */
-void LDR_Init(uint8_t Chanel);
-
+void LDRs_Init(uint8_t Channel);
 
 
 /**
@@ -51,7 +50,7 @@ void LDR_Init(uint8_t Chanel);
  * @param[in] 
  * @param[out] Devuelve el valor de intensidad medido 
  */
-uint16_t LDRReadLuxImtensity(void);
+void LDRReadLuxImtensity(uint16_t *valor1, uint16_t *valor2, uint16_t *valor3, uint16_t *valor4);
 
 
 /** @} doxygen end group definition */
