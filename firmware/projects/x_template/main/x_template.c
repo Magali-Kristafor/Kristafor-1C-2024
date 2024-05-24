@@ -19,7 +19,7 @@
  * |:----------:|:-----------------------------------------------|
  * | 12/09/2023 | Document creation		                         |
  *
- * @author Albano Peñalva (albano.penalva@uner.edu.ar)
+ * @author Magali Kristafor (magali.kristafor@ingenieria.uner.edu.ar)
  *
  */
 
@@ -31,6 +31,12 @@
 /*==================[internal data definition]===============================*/
 
 /*==================[internal functions declaration]=========================*/
+
+/** @fn convertToBcdArray (uint32_t data, uint8_t digits, uint8_t * bcd_number)
+ * @brief Descompone un numero entero en digitos y los almacena en un vector. 
+ * @param Dato de 32 bits, cantidad de digitos y un puntero a un arreglo, donde se almacenan los digitos.
+ * @retval Null. 
+*/
 
 /*==================[external functions definition]==========================*/
 void app_main(void){
