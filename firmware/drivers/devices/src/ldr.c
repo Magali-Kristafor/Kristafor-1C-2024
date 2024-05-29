@@ -1,10 +1,11 @@
 
 /*==================[inclusions]=============================================*/
+#include "ldr.h"
 #include <stdint.h>
-#include <analog_io.h>
 #include "uart_mcu.h"
 #include "analog_io_mcu.h"
-#include "timer.h"
+#include "timer_mcu.h"
+
 
 /*==================[macros and definitions]=================================*/
 /*A mayor intensidad de luz mas chica es la resistencia. En oscuridad es mas grande la resistencia*/
@@ -16,10 +17,10 @@
 /*==================[internal data declaration]==============================*/
 analog_input_config_t LDR_input;
 
-analog_input_config_t LDRinput_1;
-analog_input_config_t LDRinput_2;
-analog_input_config_t LDRinput_3;
-analog_input_config_t LDRinput_4;
+analog_input_config_t LDRinput_1 = {CH0, ADC_SINGLE};
+analog_input_config_t LDRinput_2 = {CH1, ADC_SINGLE};
+analog_input_config_t LDRinput_3 = {CH2, ADC_SINGLE};
+analog_input_config_t LDRinput_4 = {CH3, ADC_SINGLE};
 
 uint16_t ilum_lux_1 = 0;
 uint16_t ilum_lux_2 = 0;
@@ -36,70 +37,67 @@ uint16_t ilum_lux_4 = 0;
 
 /*==================[external functions definition]==========================*/
 
-void LDRs_Init(uint8_t Channel)
+void LDRs_Init(void)
 {
-	switch (Channel)
-	{
-	case CH0:
-		LDRinput_1.input = CH0;
-		LDRinput_1.mode = ADC_SINGLE;
-		LDRinput_1.func_p = NULL;
-		AnalogInputInit(&LDRinput_1);
-		break;
+	AnalogInputInit(&LDRinput_1);
+	AnalogInputInit(&LDRinput_2);
+	AnalogInputInit(&LDRinput_3);
+	AnalogInputInit(&LDRinput_4);
+};
 
-	case CH1:
-		LDRinput_2.input = CH1;
-		LDRinput_2.mode = ADC_SINGLE;
-		LDRinput_2.func_p = NULL;
-		AnalogInputInit(&LDRinput_2);
-		break;
+uint16_t LDRReadLuxIntensity_Top11()
+{
 
-	case CH2:
-		LDRinput_3.input = CH2;
-		LDRinput_3.mode = ADC_SINGLE;
-		LDRinput_3.func_p = NULL;
-		AnalogInputInit(&LDRinput_3);
-		break;
-
-	case CH3:
-		LDRinput_4.input = CH3;
-		LDRinput_4.mode = ADC_SINGLE;
-		LDRinput_4.func_p = NULL;
-		AnalogInputInit(&LDRinput_4);
-		break;
-	
-	default:
-		break;
-	}
+	AnalogInputReadSingle(LDRinput_1.input, &ilum_lux_1);
+	return ilum_lux_1;
 }
 
-void LDRReadLuxImtensity(uint8_t Channel, uint16_t *valor)
+uint16_t LDRReadLuxIntensity_Botton12()
 {
-	switch (Channel)
-	{
-	case CH0:
-	AnalogInputReadSingle(LDRinput_1.input, &valor);
-		break;
 
-	case CH1:
-		AnalogInputReadSingle(LDRinput_2.input, &valor);
-		break;
+	AnalogInputReadSingle(LDRinput_2.input, &ilum_lux_2);
+	return ilum_lux_2;
+}
+uint16_t LDRReadLuxIntensity_Right21()
+{
 
-	case CH2:
-	AnalogInputReadSingle(LDRinput_3.input, &valor);
-		break;
+	AnalogInputReadSingle(LDRinput_3.input, &ilum_lux_3);
+	return ilum_lux_3;
+}
+uint16_t LDRReadLuxIntensity_Left22()
+{
 
-	case CH3:
-	AnalogInputReadSingle(LDRinput_4.input, &valor);
-		break;
-	
-	default:
-		break;
-	}
-
-	// ilum_lux = (luz_aux_dig * LDR_DARK * 10) / (LDR_10LUX * R_CALIBRACION * (1024 - luz_aux_dig));
+	AnalogInputReadSingle(LDRinput_4.input, &ilum_lux_4);
+	return ilum_lux_4;
 }
 
+// ilum_lux = (luz_aux_dig * LDR_DARK * 10) / (LDR_10LUX * R_CALIBRACION * (1024 - luz_aux_dig));
+
+int8_t Grados_Vertical_LDR(){
+
+	float aux_arriba=(ilum_lux_1 + ilum_lux_3)/2; 
+	float aux_abajo=(ilum_lux_2 + ilum_lux_4)/2; 
+
+	float error_vert= aux_arriba - aux_abajo; 
+
+	int8_t posicion_vertical= abs(error_vert); 
+
+	return posicion_vertical; 
+
+}
+
+int8_t Grados_Horizontal_LDR(){
+
+	float aux_derecha=(ilum_lux_3 + ilum_lux_2)/2; 
+	float aux_izq=(ilum_lux_1 + ilum_lux_4)/2; 
+
+	float error_horizontal= aux_derecha - aux_izq; 
+
+	int8_t posicion_horizontal= abs(error_horizontal); 
+
+	return posicion_horizontal; 
+
+}
 
 
 
