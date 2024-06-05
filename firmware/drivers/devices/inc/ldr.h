@@ -86,7 +86,7 @@ uint16_t LDRReadLuxIntensity_Left22();
  * @param[in] 
  * @param[out] Devuelve el valor de intensidad medido 
  */
-uint16_t Grados_Vertical_LDR();
+uint8_t Grados_Vertical_LDR();
 
 
 
@@ -96,7 +96,7 @@ uint16_t Grados_Vertical_LDR();
  * @param[in] 
  * @param[out] Devuelve el valor de intensidad medido 
  */
-uint16_t Grados_Horizontal_LDR();
+uint8_t Grados_Horizontal_LDR();
 
 
 #endif /* #ifndef SERVO_SG90_H */

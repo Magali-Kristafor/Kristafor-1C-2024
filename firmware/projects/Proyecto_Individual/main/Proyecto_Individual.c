@@ -31,6 +31,7 @@
 #include "ble_mcu.h"
 #include "servo_sg90.h"
 #include "led.h"
+#include "math.h"
 
 /*==================[macros and definitions]=================================*/
 #define PERIOD_LDR 1000000 //(1s)
@@ -74,11 +75,24 @@ uint16_t valor_ldr_abajo = 0;
 uint16_t valor_ldr_derecha = 0;
 uint16_t valor_ldr_izq = 0;
 
+/* Valores para control auto*/
+
+float aux_abajo; 
+float aux_arriba;
+float aux_derecha;
+float aux_izq;
+
+float error_vert; 
+float error_horizontal; 
+
 
 /*------ Variables Servos-----*/
 
-int8_t posicion_vertical=0; 
-int8_t posicion_horizontal=0;
+int8_t posicion_vertical = 0;
+int8_t posicion_horizontal = 0;
+
+int8_t grados = 10;
+int8_t grados_neg= -10; 
 
 /*==================[internal functions declaration]=========================*/
 /**
@@ -89,6 +103,7 @@ void FuncTimerLDR(void *param)
     xTaskNotifyGive(ldr_task); /* Envía una notificación a la tarea asociada al LED_1 */
 }
 
+
 /**
  * @brief Tarea encargada de sensar la intendsidad de luz.
  */
@@ -97,17 +112,14 @@ static void SensarIntensidadLuz(void *pvParameter)
     while (true)
     {
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY); /* La tarea espera en este punto hasta recibir una notificación */
-        valor_ldr_arriba=LDRReadLuxIntensity_Top11();
-        valor_ldr_abajo=LDRReadLuxIntensity_Botton12();
-        valor_ldr_derecha=LDRReadLuxIntensity_Right21();
-        valor_ldr_izq=LDRReadLuxIntensity_Left22();
+        valor_ldr_arriba = LDRReadLuxIntensity_Top11();
+        valor_ldr_abajo = LDRReadLuxIntensity_Botton12();
+        valor_ldr_derecha = LDRReadLuxIntensity_Right21();
+        valor_ldr_izq = LDRReadLuxIntensity_Left22();
 
-        //printf("%d,%d,%d,%d\r\n",valor_ldr_arriba,valor_ldr_abajo,valor_ldr_derecha,valor_ldr_izq);
+        // printf("%d,%d,%d,%d\r\n",valor_ldr_arriba,valor_ldr_abajo,valor_ldr_derecha,valor_ldr_izq);
     }
 }
-
-
-
 
 /*Funcion para la comunicacion del bl, interrupcion*/
 void Recepcion_BL(uint8_t *valor, uint8_t length) // Recepcion de bluetooth.
@@ -159,31 +171,73 @@ static void Comunicacion_Bl(void *pvParameter)
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY); /* La tarea espera en este punto hasta recibir una notificación */
         if (BleStatus() == BLE_CONNECTED)
         {
-            BleSendString('La intensidad de luz es: '); // Envia info de lo que mide
+            BleSendString("La intensidad de luz es: "); // Envia info de lo que mide
         }
     }
 }
-
 
 static void Mover_Panel(void *pvParameter)
 {
+
     while (true)
     {
-        ulTaskNotifyTake(pdTRUE, portMAX_DELAY); /* La tarea espera en este punto hasta recibir una notificación */
-        if(flg_auto_manual){
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY); // La tarea espera en este punto hasta recibir una notificación
+
+        if(flg_on_off){
+
+            aux_abajo=(valor_ldr_abajo + valor_ldr_izq)/2;
+            aux_arriba=(valor_ldr_arriba + valor_ldr_derecha)/2; 
+
+            aux_derecha=(valor_ldr_derecha + valor_ldr_abajo)/2; 
+            aux_izq=(valor_ldr_izq + valor_ldr_arriba)/2; 
+
+            error_vert= aux_arriba-aux_abajo; 
+
+            error_horizontal= aux_derecha-aux_izq; 
             
+            // Control automatico del servo vertical
+          
+            if (flg_auto_manual)        // True para modo manual
+        {
+            switch (direction)
+            {
+            case UP: /*Valor para mover arriba*/
+            //summar cuando apretas el botton. 
+
+
+                ServoMove(SERVO_0, grados); //Servo angle (from -90 to 90 degrees)
+                ASSIST_DEBUG_CORE_0_IRAM0_EXCEPTION_MONITOR_0_REG=0; 
+                break;
+
+            case DOWN: /*Valor para mover abajo*/
+                ServoMove(SERVO_0, grados_neg);
+                break;
+
+            case RIGHT: /*Valor para mover derecha*/
+                ServoMove(SERVO_1, grados);
+                break;
+
+            case LEFT: /*Valor para mover izquierda*/
+                ServoMove(SERVO_1, grados_neg); 
+                break;
+
+            default:
+                break;
+            }
+
         }
 
+        }
 
     }
 }
+
 
 /*==================[external functions definition]==========================*/
 void app_main(void)
 {
 
     LedsInit();
-
     /* Inicialización de timers */
     timer_config_t timer_ldr = {
         .timer = TIMER_A,
@@ -192,35 +246,31 @@ void app_main(void)
         .param_p = NULL};
     TimerInit(&timer_ldr);
 
+
     /**Inicializacion de los LDRs*/
     LDRs_Init();
 
     /*Inicializacion de los Servos*/
-    ServoInit(SERVO_0, GPIO_18);
-    ServoInit(SERVO_1, GPIO_19);
+    ServoInit(SERVO_0, GPIO_18); // servo mueve vertical
+    ServoInit(SERVO_1, GPIO_19); // servo mueve horizontal
 
     ble_config_t ble_configuration = {
-        "ESP_EDU_1",
+        "BLE_MAGA",
         Recepcion_BL};
     BleInit(&ble_configuration);
-    
-
 
     /* Creación de tareas */
-    xTaskCreate(&SensarIntensidadLuz, "Sensado de luz", 1024, NULL, 5, &ldr_task);
+    xTaskCreate(&SensarIntensidadLuz, "Sensado de luz", 1024, NULL, 5, &ldr_task); // listo
     xTaskCreate(&Mover_Panel, "Movimiento del panel", 512, NULL, 5, &panel_task);
-    //xTaskCreate(&Comunicacion_Bl, "Comunicacion_Bl", 512, NULL, 5, &com_task);
-    
+    xTaskCreate(&Comunicacion_Bl, "Comunicacion_Bl", 512, NULL, 5, &com_task);
 
     /* Inicialización del conteo de timers */
     TimerStart(timer_ldr.timer);
 
-
-
     while (1)
     {
         vTaskDelay(CONFIG_BLINK_PERIOD / portTICK_PERIOD_MS);
-        printf("%d,%d,%d,%d\r\n",valor_ldr_arriba,valor_ldr_abajo,valor_ldr_derecha,valor_ldr_izq);
+        printf("%d,%d,%d,%d\r\n", valor_ldr_arriba, valor_ldr_abajo, valor_ldr_derecha, valor_ldr_izq);
         switch (BleStatus())
         {
         case BLE_OFF:

@@ -5,6 +5,7 @@
 #include "uart_mcu.h"
 #include "analog_io_mcu.h"
 #include "timer_mcu.h"
+#include "math.h"
 
 
 /*==================[macros and definitions]=================================*/
@@ -73,27 +74,27 @@ uint16_t LDRReadLuxIntensity_Left22()
 
 // ilum_lux = (luz_aux_dig * LDR_DARK * 10) / (LDR_10LUX * R_CALIBRACION * (1024 - luz_aux_dig));
 
-int8_t Grados_Vertical_LDR(){
+uint8_t Grados_Vertical_LDR(){
 
 	float aux_arriba=(ilum_lux_1 + ilum_lux_3)/2; 
 	float aux_abajo=(ilum_lux_2 + ilum_lux_4)/2; 
 
 	float error_vert= aux_arriba - aux_abajo; 
 
-	int8_t posicion_vertical= abs(error_vert); 
+	uint8_t posicion_vertical= abs((int8_t)error_vert); 
 
 	return posicion_vertical; 
 
 }
 
-int8_t Grados_Horizontal_LDR(){
+uint8_t Grados_Horizontal_LDR(){
 
 	float aux_derecha=(ilum_lux_3 + ilum_lux_2)/2; 
 	float aux_izq=(ilum_lux_1 + ilum_lux_4)/2; 
 
 	float error_horizontal= aux_derecha - aux_izq; 
 
-	int8_t posicion_horizontal= abs(error_horizontal); 
+	uint8_t posicion_horizontal= abs((int8_t)error_horizontal); 
 
 	return posicion_horizontal; 
 
