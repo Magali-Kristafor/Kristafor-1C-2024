@@ -46,10 +46,10 @@ TaskHandle_t panel_task = NULL;
 
 /*Variables para la comunicacion bluetooth*/
 bool flg_on_off = false;      // true para activar la app
-bool flg_auto_manual = false; // true para activar el modo manual.
+bool flg_auto_manual = false; // true para activar modo automatico.
 uint8_t mode = 0;             // Modo manual o automatico. valores ('B'=on) ('b'=off).
 
-int direction;
+int direction = 0;
 
 enum
 {
@@ -77,22 +77,21 @@ uint16_t valor_ldr_izq = 0;
 
 /* Valores para control auto*/
 
-float aux_abajo; 
+float aux_abajo;
 float aux_arriba;
 float aux_derecha;
 float aux_izq;
 
-float error_vert; 
-float error_horizontal; 
-
+float error_vert;
+float error_horizontal;
 
 /*------ Variables Servos-----*/
 
 int8_t posicion_vertical = 0;
 int8_t posicion_horizontal = 0;
 
-int8_t grados = 10;
-int8_t grados_neg= -10; 
+int8_t grados_1 = 0;
+int8_t grados_2 = 0;
 
 /*==================[internal functions declaration]=========================*/
 /**
@@ -102,7 +101,6 @@ void FuncTimerLDR(void *param)
 {
     xTaskNotifyGive(ldr_task); /* Envía una notificación a la tarea asociada al LED_1 */
 }
-
 
 /**
  * @brief Tarea encargada de sensar la intendsidad de luz.
@@ -133,30 +131,33 @@ void Recepcion_BL(uint8_t *valor, uint8_t length) // Recepcion de bluetooth.
         flg_on_off = flg_on_off;
         break;
 
-    case 'B': /*Valor on para activar el modo manual*/
+    case 'B': /*ON modo automatico*/
         flg_auto_manual = !flg_auto_manual;
         mode = 'B';
         break;
-    case 'b': /*Valor off para apagar el modo manual*/
+    case 'b': /*Valor off para apagar el modo automatico*/
         flg_on_off = flg_on_off;
         mode = 'b';
         break;
 
     case '1': /*Valor para mover arriba*/
         direction = UP;
-        // up=1;
+        grados_1 += 5; // up=1;
         break;
 
     case '3': /*Valor para mover abajo*/
         direction = DOWN;
+        grados_1 -= 5;
         break;
 
     case '2': /*Valor para mover derecha*/
         direction = RIGHT;
+        grados_2 += 5;
         break;
 
     case '4': /*Valor para mover izquierda*/
         direction = LEFT;
+        grados_2 -= 5;
         break;
 
     default:
@@ -183,55 +184,37 @@ static void Mover_Panel(void *pvParameter)
     {
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY); // La tarea espera en este punto hasta recibir una notificación
 
-        if(flg_on_off){
-
-            aux_abajo=(valor_ldr_abajo + valor_ldr_izq)/2;
-            aux_arriba=(valor_ldr_arriba + valor_ldr_derecha)/2; 
-
-            aux_derecha=(valor_ldr_derecha + valor_ldr_abajo)/2; 
-            aux_izq=(valor_ldr_izq + valor_ldr_arriba)/2; 
-
-            error_vert= aux_arriba-aux_abajo; 
-
-            error_horizontal= aux_derecha-aux_izq; 
-            
-            // Control automatico del servo vertical
-          
-            if (flg_auto_manual)        // True para modo manual
+        if (flg_on_off)
         {
-            switch (direction)
+            if (flg_auto_manual) // True, modo automatico en on 
             {
-            case UP: /*Valor para mover arriba*/
-            //summar cuando apretas el botton. 
+                aux_abajo = (valor_ldr_abajo + valor_ldr_izq) / 2;
+                aux_arriba = (valor_ldr_arriba + valor_ldr_derecha) / 2;
+
+                aux_derecha = (valor_ldr_derecha + valor_ldr_abajo) / 2;
+                aux_izq = (valor_ldr_izq + valor_ldr_arriba) / 2;
+
+                error_vert = aux_arriba - aux_abajo;
+                error_horizontal = aux_derecha - aux_izq;
+
+                if(error_vert)
 
 
-                ServoMove(SERVO_0, grados); //Servo angle (from -90 to 90 degrees)
-                ASSIST_DEBUG_CORE_0_IRAM0_EXCEPTION_MONITOR_0_REG=0; 
-                break;
-
-            case DOWN: /*Valor para mover abajo*/
-                ServoMove(SERVO_0, grados_neg);
-                break;
-
-            case RIGHT: /*Valor para mover derecha*/
-                ServoMove(SERVO_1, grados);
-                break;
-
-            case LEFT: /*Valor para mover izquierda*/
-                ServoMove(SERVO_1, grados_neg); 
-                break;
-
-            default:
-                break;
             }
-
+            else { 
+            
+            //modo manual
+               if (direction==UP || direction==DOWN){
+                ServoMove(SERVO_0, grados_1); 
+               }
+               if(direction==RIGHT || direction==LEFT){
+                ServoMove(SERVO_1, grados_2); 
+               }
+               
+            }
         }
-
-        }
-
     }
 }
-
 
 /*==================[external functions definition]==========================*/
 void app_main(void)
@@ -246,7 +229,6 @@ void app_main(void)
         .param_p = NULL};
     TimerInit(&timer_ldr);
 
-
     /**Inicializacion de los LDRs*/
     LDRs_Init();
 
@@ -255,7 +237,7 @@ void app_main(void)
     ServoInit(SERVO_1, GPIO_19); // servo mueve horizontal
 
     ble_config_t ble_configuration = {
-        "BLE_MAGA",
+        "SOLAR_MAGA",
         Recepcion_BL};
     BleInit(&ble_configuration);
 
