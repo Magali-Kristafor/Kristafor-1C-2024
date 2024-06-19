@@ -32,11 +32,12 @@
 #include "servo_sg90.h"
 #include "led.h"
 #include "math.h"
+#include "switch.h"
 
 /*==================[macros and definitions]=================================*/
 #define PERIOD_LDR 1000000 //(1s)
-#define CONFIG_BLINK_PERIOD 100
-#define LUX_NORMAL 500
+#define CONFIG_BLINK_PERIOD 500
+#define PERIOD_SERVO 100
 
 #define LED_BT LED_1
 /*==================[internal data definition]===============================*/
@@ -126,38 +127,45 @@ void Recepcion_BL(uint8_t *valor, uint8_t length) // Recepcion de bluetooth.
     {
     case 'C': /*Valor para On, app*/
         flg_on_off = !flg_on_off;
+        printf(" app C \n");
         break;
     case 'c': /*Valor para Off, app*/
         flg_on_off = flg_on_off;
+        printf(" app c \n");
         break;
 
-    case 'B': /*ON modo automatico*/
+    case 'A': /*ON modo automatico*/
         flg_auto_manual = !flg_auto_manual;
-        mode = 'B';
+        printf(" app A \n");
         break;
-    case 'b': /*Valor off para apagar el modo automatico*/
-        flg_on_off = flg_on_off;
-        mode = 'b';
+    case 'a': /*Valor off para apagar el modo automatico*/
+        flg_on_off = flg_auto_manual;
+        printf(" app a \n");
         break;
 
     case '1': /*Valor para mover arriba*/
         direction = UP;
-        grados_1 += 5; // up=1;
+        printf(" app 1 \n");
+        grados_1 += 1; // up=1;
         break;
 
     case '3': /*Valor para mover abajo*/
         direction = DOWN;
-        grados_1 -= 5;
+        printf(" app 3 \n");
+        ;
+        grados_1 -= 1;
         break;
 
     case '2': /*Valor para mover derecha*/
         direction = RIGHT;
-        grados_2 += 5;
+        printf(" app 2 \n");
+        grados_2 += 1;
         break;
 
     case '4': /*Valor para mover izquierda*/
         direction = LEFT;
-        grados_2 -= 5;
+        printf(" app 4 \n");
+        grados_2 -= 1;
         break;
 
     default:
@@ -165,68 +173,82 @@ void Recepcion_BL(uint8_t *valor, uint8_t length) // Recepcion de bluetooth.
     }
 }
 
+/*
 static void Comunicacion_Bl(void *pvParameter)
 {
     while (true)
     {
-        ulTaskNotifyTake(pdTRUE, portMAX_DELAY); /* La tarea espera en este punto hasta recibir una notificación */
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY); //La tarea espera en este punto hasta recibir una notificación
         if (BleStatus() == BLE_CONNECTED)
         {
             BleSendString("La intensidad de luz es: "); // Envia info de lo que mide
         }
     }
 }
-
+*/
 static void Mover_Panel(void *pvParameter)
 {
 
     while (true)
     {
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY); // La tarea espera en este punto hasta recibir una notificación
+        vTaskDelay(PERIOD_SERVO / portTICK_PERIOD_MS);
 
         if (flg_on_off)
         {
-            if (flg_auto_manual) // True, modo automatico en on 
+            if (flg_auto_manual) // True, modo automatico en on
             {
-                //para los angulos verticales
-                aux_abajo = (valor_ldr_abajo + valor_ldr_izq) / 2;
+                aux_abajo = (valor_ldr_abajo + (valor_ldr_izq * 2.25)) / 2;
                 aux_arriba = (valor_ldr_arriba + valor_ldr_derecha) / 2;
                 error_vert = aux_arriba - aux_abajo;
-                int8_t angle_vert=Grados_Vertical_LDR();
 
-
-               // para los angulos horizontales
+                // para los angulos horizontales
                 aux_derecha = (valor_ldr_derecha + valor_ldr_abajo) / 2;
-                aux_izq = (valor_ldr_izq + valor_ldr_arriba) / 2;
+                aux_izq = ((valor_ldr_izq * 2.25) + valor_ldr_arriba) / 2;
                 error_horizontal = aux_derecha - aux_izq;
-                int8_t angle_hori=Grados_Horizontal_LDR();
 
-                if(error_vert>0){
-                    ServoMove(SERVO_0,angle_vert);
-
-                }else{
-                    ServoMove(SERVO_0,angle_vert);
+                if (error_vert > 100)
+                {
+                    grados_1 += 1;
+                    printf("%f\n", error_vert);
+                    ServoMove(SERVO_1, grados_1); // mueve para arriba
+                    printf(" Error: %.0f Mueve para arriba \n", error_vert);
+                }
+                if (error_vert < -100)
+                {
+                    grados_1 -= 1;
+                    ServoMove(SERVO_1, grados_1); // mueve4 para abajo
+                    printf(" Error: %.0f Mueve para abajo \n", error_vert);
                 }
 
-                if(error_horizontal>0){
-                    ServoMove(SERVO_1,angle_hori);
-
-                }else{
-                    ServoMove(SERVO_1,angle_hori);
+                if (error_horizontal > 100)
+                {
+                    grados_2 += 1;
+                    printf("%f\n", error_horizontal);
+                    ServoMove(SERVO_0, grados_2); // mueve para arriba
+                    printf(" Error: %.0f Mueve a la derecha \n", error_horizontal);
                 }
-
-
+                if (error_horizontal < -100)
+                {
+                    grados_2 -= 1;
+                    ServoMove(SERVO_0, grados_2); // mueve4 para abajo
+                    printf(" Error: %.0f Mueve a la izq \n", error_horizontal);
+                }
             }
-            else { 
-            
-            //modo manual
-               if (direction==UP || direction==DOWN){
-                ServoMove(SERVO_0, grados_1); 
-               }
-               if(direction==RIGHT || direction==LEFT){
-                ServoMove(SERVO_1, grados_2); 
-               }
-               
+            else
+            {
+
+                // modo manual
+                if (direction == UP || direction == DOWN)
+                {
+                    ServoMove(SERVO_0, grados_1);
+                    grados_1 = 1;
+                }
+                if (direction == RIGHT || direction == LEFT)
+                {
+                    ServoMove(SERVO_1, grados_2);
+                    grados_2 = 1;
+                }
             }
         }
     }
@@ -237,6 +259,8 @@ void app_main(void)
 {
 
     LedsInit();
+    SwitchesInit();
+
     /* Inicialización de timers */
     timer_config_t timer_ldr = {
         .timer = TIMER_A,
@@ -260,15 +284,16 @@ void app_main(void)
     /* Creación de tareas */
     xTaskCreate(&SensarIntensidadLuz, "Sensado de luz", 1024, NULL, 5, &ldr_task); // listo
     xTaskCreate(&Mover_Panel, "Movimiento del panel", 512, NULL, 5, &panel_task);
-    xTaskCreate(&Comunicacion_Bl, "Comunicacion_Bl", 512, NULL, 5, &com_task);
+    // xTaskCreate(&Comunicacion_Bl, "Comunicacion_Bl", 512, NULL, 5, &com_task);
 
     /* Inicialización del conteo de timers */
     TimerStart(timer_ldr.timer);
 
+    int8_t teclas;
     while (1)
     {
-        vTaskDelay(CONFIG_BLINK_PERIOD / portTICK_PERIOD_MS);
-        printf("%d,%d,%d,%.0f\r\n", valor_ldr_arriba, valor_ldr_abajo, valor_ldr_derecha, 2.25*valor_ldr_izq);
+        vTaskDelay(PERIOD_SERVO / portTICK_PERIOD_MS);
+        // printf("%d,%d,%d,%.0f\r\n", valor_ldr_arriba, valor_ldr_abajo, valor_ldr_derecha, 2.25 * valor_ldr_izq);
         switch (BleStatus())
         {
         case BLE_OFF:
@@ -282,44 +307,63 @@ void app_main(void)
             break;
         }
 
-//para los angulos verticales
-                aux_abajo = (valor_ldr_abajo + (valor_ldr_izq*2.25)) / 2;
-                aux_arriba = (valor_ldr_arriba + valor_ldr_derecha) / 2;
-                error_vert = aux_arriba - aux_abajo;
-                //int8_t angle_vert=Grados_Vertical_LDR();
+        aux_abajo = (valor_ldr_abajo + (valor_ldr_izq * 2.25)) / 2;
+        aux_arriba = (valor_ldr_arriba + valor_ldr_derecha) / 2;
+        error_vert = aux_arriba - aux_abajo;
 
+        // para los angulos horizontales
+        aux_derecha = (valor_ldr_derecha + valor_ldr_abajo) / 2;
+        aux_izq = ((valor_ldr_izq * 2.25) + valor_ldr_arriba) / 2;
+        error_horizontal = aux_derecha - aux_izq;
+/*
+        if (error_vert > 50)
+        {
+            grados_1 += 1;
+            printf("%f\n", error_vert);
+            ServoMove(SERVO_1, grados_1); // mueve para arriba
+            printf(" Error: %.0f Mueve para arriba \n", error_vert);
+        }
+        if (error_vert < -50)
+        {
+            grados_1 -= 1;
+            ServoMove(SERVO_1, grados_1); // mueve4 para abajo
+            printf(" Error: %.0f Mueve para abajo \n", error_vert);
+        }
+*/
+        if (error_horizontal > 100)
+        {
+            grados_2 += 1;
+            printf("%f\n", error_horizontal);
+            ServoMove(SERVO_0, grados_2); // mueve para arriba
+            printf(" Error: %.0f Mueve a la derecha \n", error_horizontal);
+        }
+        if (error_horizontal < -100)
+        {
+            grados_2 -= 1;
+            ServoMove(SERVO_0, grados_2); // mueve4 para abajo
+            printf(" Error: %.0f Mueve a la izq \n", error_horizontal);
+        }
 
-               // para los angulos horizontales
-                aux_derecha = (valor_ldr_derecha + valor_ldr_abajo) / 2;
-                aux_izq = ((valor_ldr_izq*2.25) + valor_ldr_arriba) / 2;
-                error_horizontal = aux_derecha - aux_izq;
-                //int8_t angle_hori=Grados_Horizontal_LDR();
+        /*
+        teclas = SwitchesRead();
+        switch (teclas)
+        {
+        case SWITCH_1:
+            grados_1 += grados_1;
+            ServoMove(SERVO_0, grados_1);
+            grados_2 = 1;
+            break;
+        case SWITCH_2:
+            grados_1 -= grados_1;
+            ServoMove(SERVO_0, grados_1);
+            grados_2 = 1;
 
-                if(error_vert>100){
-                    grados_1+=1; 
-                    printf("%f\n", error_vert);
-                    ServoMove(SERVO_1,grados_1); //mueve para arriba 
-                    printf(" Error: %.0f Mueve para arriba \n", error_vert); 
-
-                }
-                if(error_vert<-100){
-                    grados_1-=1; 
-                    ServoMove(SERVO_1,grados_1); //mueve4 para abajo 
-                    printf(" Error: %.0f Mueve para abajo \n", error_vert); 
-                }
-
-                if(error_horizontal>100){
-                    grados_2+=1; 
-                    printf("%f\n", error_horizontal);  
-                    ServoMove(SERVO_0,grados_2); //mueve para arriba 
-                    printf(" Error: %.0f Mueve a la derecha \n", error_horizontal);  
-                }
-                if(error_horizontal<-100){
-                    grados_2-=1; 
-                    ServoMove(SERVO_0,grados_2); //mueve4 para abajo 
-                    printf(" Error: %.0f Mueve a la izq \n", error_horizontal);
-                }
-    
-
+            break;
+        default:
+            break;
+        }
+*/
     }
+
+    // para los angulos verticales
 }
