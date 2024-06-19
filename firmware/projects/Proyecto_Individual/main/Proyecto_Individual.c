@@ -35,7 +35,7 @@
 
 /*==================[macros and definitions]=================================*/
 #define PERIOD_LDR 1000000 //(1s)
-#define CONFIG_BLINK_PERIOD 500
+#define CONFIG_BLINK_PERIOD 100
 #define LUX_NORMAL 500
 
 #define LED_BT LED_1
@@ -87,11 +87,11 @@ float error_horizontal;
 
 /*------ Variables Servos-----*/
 
-int8_t posicion_vertical = 0;
-int8_t posicion_horizontal = 0;
+int8_t posicion_vertical = 1;
+int8_t posicion_horizontal = 1;
 
-int8_t grados_1 = 0;
-int8_t grados_2 = 0;
+int8_t grados_1 = 1;
+int8_t grados_2 = 1;
 
 /*==================[internal functions declaration]=========================*/
 /**
@@ -188,16 +188,32 @@ static void Mover_Panel(void *pvParameter)
         {
             if (flg_auto_manual) // True, modo automatico en on 
             {
+                //para los angulos verticales
                 aux_abajo = (valor_ldr_abajo + valor_ldr_izq) / 2;
                 aux_arriba = (valor_ldr_arriba + valor_ldr_derecha) / 2;
+                error_vert = aux_arriba - aux_abajo;
+                int8_t angle_vert=Grados_Vertical_LDR();
 
+
+               // para los angulos horizontales
                 aux_derecha = (valor_ldr_derecha + valor_ldr_abajo) / 2;
                 aux_izq = (valor_ldr_izq + valor_ldr_arriba) / 2;
-
-                error_vert = aux_arriba - aux_abajo;
                 error_horizontal = aux_derecha - aux_izq;
+                int8_t angle_hori=Grados_Horizontal_LDR();
 
-                if(error_vert)
+                if(error_vert>0){
+                    ServoMove(SERVO_0,angle_vert);
+
+                }else{
+                    ServoMove(SERVO_0,angle_vert);
+                }
+
+                if(error_horizontal>0){
+                    ServoMove(SERVO_1,angle_hori);
+
+                }else{
+                    ServoMove(SERVO_1,angle_hori);
+                }
 
 
             }
@@ -233,8 +249,8 @@ void app_main(void)
     LDRs_Init();
 
     /*Inicializacion de los Servos*/
-    ServoInit(SERVO_0, GPIO_18); // servo mueve vertical
-    ServoInit(SERVO_1, GPIO_19); // servo mueve horizontal
+    ServoInit(SERVO_0, GPIO_18); // servo mueve horizontal
+    ServoInit(SERVO_1, GPIO_21); // servo mueve vertical
 
     ble_config_t ble_configuration = {
         "SOLAR_MAGA",
@@ -252,7 +268,7 @@ void app_main(void)
     while (1)
     {
         vTaskDelay(CONFIG_BLINK_PERIOD / portTICK_PERIOD_MS);
-        printf("%d,%d,%d,%d\r\n", valor_ldr_arriba, valor_ldr_abajo, valor_ldr_derecha, valor_ldr_izq);
+        printf("%d,%d,%d,%.0f\r\n", valor_ldr_arriba, valor_ldr_abajo, valor_ldr_derecha, 2.25*valor_ldr_izq);
         switch (BleStatus())
         {
         case BLE_OFF:
@@ -265,5 +281,45 @@ void app_main(void)
             LedOn(LED_BT);
             break;
         }
+
+//para los angulos verticales
+                aux_abajo = (valor_ldr_abajo + (valor_ldr_izq*2.25)) / 2;
+                aux_arriba = (valor_ldr_arriba + valor_ldr_derecha) / 2;
+                error_vert = aux_arriba - aux_abajo;
+                //int8_t angle_vert=Grados_Vertical_LDR();
+
+
+               // para los angulos horizontales
+                aux_derecha = (valor_ldr_derecha + valor_ldr_abajo) / 2;
+                aux_izq = ((valor_ldr_izq*2.25) + valor_ldr_arriba) / 2;
+                error_horizontal = aux_derecha - aux_izq;
+                //int8_t angle_hori=Grados_Horizontal_LDR();
+
+                if(error_vert>100){
+                    grados_1+=1; 
+                    printf("%f\n", error_vert);
+                    ServoMove(SERVO_1,grados_1); //mueve para arriba 
+                    printf(" Error: %.0f Mueve para arriba \n", error_vert); 
+
+                }
+                if(error_vert<-100){
+                    grados_1-=1; 
+                    ServoMove(SERVO_1,grados_1); //mueve4 para abajo 
+                    printf(" Error: %.0f Mueve para abajo \n", error_vert); 
+                }
+
+                if(error_horizontal>100){
+                    grados_2+=1; 
+                    printf("%f\n", error_horizontal);  
+                    ServoMove(SERVO_0,grados_2); //mueve para arriba 
+                    printf(" Error: %.0f Mueve a la derecha \n", error_horizontal);  
+                }
+                if(error_horizontal<-100){
+                    grados_2-=1; 
+                    ServoMove(SERVO_0,grados_2); //mueve4 para abajo 
+                    printf(" Error: %.0f Mueve a la izq \n", error_horizontal);
+                }
+    
+
     }
 }

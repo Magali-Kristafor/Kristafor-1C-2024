@@ -10,10 +10,14 @@
 
 /*==================[macros and definitions]=================================*/
 /*A mayor intensidad de luz mas chica es la resistencia. En oscuridad es mas grande la resistencia*/
-#define LDR_DARK 1000	 /*Resistencia en oscuridad, en KΩ. (~1Mohm)*/
-#define LDR_10LUX 10	 /*Resistencia a 10 lux, en KΩ. (~1.8 Kohm)*/
-#define R_CALIBRACION 47 /*Resistencia calibracion en KΩ*/
-#define LUX_NORMAL 1000	 /*lux normal*/
+#define LDR_DARK 2300	 /*mV en luz*/
+#define LDR_10LUX 300	 /*mv en oscuridad*/
+//#define R_CALIBRACION 47 /*Resistencia calibracion en KΩ*/
+//#define LUX_NORMAL 1000	 /*lux normal*/
+
+#define MAX_ANG 90
+#define MIN_ANG -90
+
 
 /*==================[internal data declaration]==============================*/
 analog_input_config_t LDR_input;
@@ -74,29 +78,33 @@ uint16_t LDRReadLuxIntensity_Left22()
 
 // ilum_lux = (luz_aux_dig * LDR_DARK * 10) / (LDR_10LUX * R_CALIBRACION * (1024 - luz_aux_dig));
 
-uint8_t Grados_Vertical_LDR(){
+int8_t Grados_Vertical_LDR(){
 
 	float aux_arriba=(ilum_lux_1 + ilum_lux_3)/2; 
 	float aux_abajo=(ilum_lux_2 + ilum_lux_4)/2; 
 
 	float error_vert= aux_arriba - aux_abajo; 
 
-	uint8_t posicion_vertical= abs((int8_t)error_vert); 
+	//uint8_t LDR_vertical= abs((int8_t)error_vert); 
 
-	return posicion_vertical; 
+	int8_t angle_vertical= ( (((MAX_ANG-MIN_ANG)/(LDR_10LUX-LDR_DARK)) * (error_vert-LDR_DARK) )+ MIN_ANG); 
+
+	return angle_vertical; 
 
 }
 
-uint8_t Grados_Horizontal_LDR(){
+int8_t Grados_Horizontal_LDR(){
 
 	float aux_derecha=(ilum_lux_3 + ilum_lux_2)/2; 
 	float aux_izq=(ilum_lux_1 + ilum_lux_4)/2; 
 
 	float error_horizontal= aux_derecha - aux_izq; 
 
-	uint8_t posicion_horizontal= abs((int8_t)error_horizontal); 
+	//uint8_t LDR_horizontal= abs((int8_t)error_horizontal); 
 
-	return posicion_horizontal; 
+	int8_t angle_horizontal= ( (((MAX_ANG-MIN_ANG)/(LDR_10LUX-LDR_DARK)) * (error_horizontal-LDR_DARK) )+ MIN_ANG); 
+
+	return angle_horizontal; 
 
 }
 
